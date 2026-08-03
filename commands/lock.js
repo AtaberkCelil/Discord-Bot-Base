@@ -4,16 +4,16 @@ const { checkPermission } = require('../utils/permissions');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('lock')
-    .setDescription('Bu kanalı kilitler (sadece yetkililer mesaj atabilir)')
+    .setDescription('Locks this channel (only moderators can send messages)')
     .addStringOption((option) =>
-      option.setName('reason').setDescription('Kilitleme sebebi').setRequired(false)
+      option.setName('reason').setDescription('The reason for locking').setRequired(false)
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
 
   async execute(interaction) {
     if (!(await checkPermission(interaction))) return;
 
-    const reason = interaction.options.getString('reason') || 'Sebep belirtilmedi';
+    const reason = interaction.options.getString('reason') || 'No reason provided';
     const channel = interaction.channel;
     const everyoneRole = interaction.guild.roles.everyone;
 
@@ -24,11 +24,11 @@ module.exports = {
 
       const embed = new EmbedBuilder()
         .setColor('Red')
-        .setTitle('🔒 Kanal Kilitlendi')
-        .setDescription('Bu kanal yetkililer dışında herkes için kilitlendi.')
+        .setTitle('🔒 Channel Locked')
+        .setDescription('This channel is now locked for everyone except moderators.')
         .addFields(
-          { name: 'Yetkili', value: interaction.user.tag },
-          { name: 'Sebep', value: reason }
+          { name: 'Moderator', value: interaction.user.tag },
+          { name: 'Reason', value: reason }
         )
         .setTimestamp();
 
@@ -36,7 +36,7 @@ module.exports = {
     } catch (error) {
       console.error(error);
       return interaction.reply({
-        content: '❌ Kanal kilitlenirken bir hata oluştu. (Botun "Kanalları Yönet" iznine sahip olduğundan emin ol)',
+        content: '❌ An error occurred while locking the channel. (Make sure the bot has the "Manage Channels" permission)',
         ephemeral: true,
       });
     }

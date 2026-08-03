@@ -4,17 +4,17 @@ const { checkPermission } = require('../utils/permissions');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('ban')
-    .setDescription('Bir kullanıcıyı sunucudan yasaklar')
+    .setDescription('Bans a user from the server')
     .addUserOption((option) =>
-      option.setName('user').setDescription('Yasaklanacak kullanıcı').setRequired(true)
+      option.setName('user').setDescription('The user to ban').setRequired(true)
     )
     .addStringOption((option) =>
-      option.setName('reason').setDescription('Yasaklama sebebi').setRequired(false)
+      option.setName('reason').setDescription('The reason for the ban').setRequired(false)
     )
     .addIntegerOption((option) =>
       option
         .setName('delete_days')
-        .setDescription('Son kaç günlük mesajları silinsin (0-7)')
+        .setDescription('How many days of messages to delete (0-7)')
         .setMinValue(0)
         .setMaxValue(7)
         .setRequired(false)
@@ -25,7 +25,7 @@ module.exports = {
     if (!(await checkPermission(interaction))) return;
 
     const targetUser = interaction.options.getUser('user');
-    const reason = interaction.options.getString('reason') || 'Sebep belirtilmedi';
+    const reason = interaction.options.getString('reason') || 'No reason provided';
     const deleteDays = interaction.options.getInteger('delete_days') || 0;
 
     const member = interaction.guild.members.cache.get(targetUser.id);
@@ -33,7 +33,7 @@ module.exports = {
     if (member) {
       if (!member.bannable) {
         return interaction.reply({
-          content: '❌ Bu kullanıcıyı yasaklayamıyorum. (Rol hiyerarşisi veya izin sorunu)',
+          content: '❌ I cannot ban this user. (Role hierarchy or permission issue)',
           ephemeral: true,
         });
       }
@@ -41,17 +41,17 @@ module.exports = {
 
     try {
       await interaction.guild.members.ban(targetUser.id, {
-        reason: `${reason} | Yetkili: ${interaction.user.tag}`,
+        reason: `${reason} | Moderator: ${interaction.user.tag}`,
         deleteMessageSeconds: deleteDays * 24 * 60 * 60,
       });
 
       const embed = new EmbedBuilder()
         .setColor('Red')
-        .setTitle('🔨 Kullanıcı Yasaklandı')
+        .setTitle('🔨 User Banned')
         .addFields(
-          { name: 'Kullanıcı', value: `${targetUser.tag} (${targetUser.id})` },
-          { name: 'Yetkili', value: interaction.user.tag },
-          { name: 'Sebep', value: reason }
+          { name: 'User', value: `${targetUser.tag} (${targetUser.id})` },
+          { name: 'Moderator', value: interaction.user.tag },
+          { name: 'Reason', value: reason }
         )
         .setTimestamp();
 
@@ -59,7 +59,7 @@ module.exports = {
     } catch (error) {
       console.error(error);
       return interaction.reply({
-        content: '❌ Kullanıcı yasaklanırken bir hata oluştu.',
+        content: '❌ An error occurred while banning the user.',
         ephemeral: true,
       });
     }

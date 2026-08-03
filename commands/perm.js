@@ -4,35 +4,35 @@ const { addAdminRole, removeAdminRole, getAdminRoleIds } = require('../utils/per
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('perm')
-    .setDescription('Moderasyon komutlarını kullanabilecek rolleri yönetir')
+    .setDescription('Manages the roles that can use moderation commands')
     .addSubcommand((sub) =>
       sub
         .setName('add')
-        .setDescription('Bir role moderasyon komutu kullanma izni verir')
+        .setDescription('Grants a role permission to use moderation commands')
         .addRoleOption((option) =>
-          option.setName('role').setDescription('İzin verilecek rol').setRequired(true)
+          option.setName('role').setDescription('The role to grant permission').setRequired(true)
         )
     )
     .addSubcommand((sub) =>
       sub
         .setName('remove')
-        .setDescription('Bir rolün moderasyon komutu kullanma iznini kaldırır')
+        .setDescription('Removes a role\'s permission to use moderation commands')
         .addRoleOption((option) =>
-          option.setName('role').setDescription('İzni kaldırılacak rol').setRequired(true)
+          option.setName('role').setDescription('The role to remove permission from').setRequired(true)
         )
     )
-    .addSubcommand((sub) => sub.setName('list').setDescription('Yetkili rolleri listeler'))
-    // Bilerek sadece gerçek Administrator yetkisi olanlar kullanabilir.
-    // (Eğer normal mod rolleri de /perm'i kullanabilseydi, kendilerine
-    // istedikleri rolü ekleyip yetkilerini büyütebilirlerdi.)
+    .addSubcommand((sub) => sub.setName('list').setDescription('Lists the authorized roles'))
+    // Deliberately, only real Administrators can use this.
+    // (If mod roles could also use /perm, they could add
+    // any role and escalate their own permissions.)
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(interaction) {
-    // Ekstra güvenlik: config/checkPermission'a değil, doğrudan gerçek
-    // Administrator yetkisine bakıyoruz.
+    // Extra security: not checking config/checkPermission, but directly
+    // the real Administrator permission.
     if (!interaction.member.permissions.has('Administrator')) {
       return interaction.reply({
-        content: '❌ Bu komutu sadece sunucu yöneticileri kullanabilir.',
+        content: '❌ Only server administrators can use this command.',
         ephemeral: true,
       });
     }
@@ -45,12 +45,12 @@ module.exports = {
 
       if (!added) {
         return interaction.reply({
-          content: `⚠️ **${role.name}** rolü zaten yetkili roller listesinde.`,
+          content: `⚠️ The role **${role.name}** is already in the authorized roles list.`,
           ephemeral: true,
         });
       }
 
-      return interaction.reply(`✅ **${role.name}** rolüne moderasyon komutları için izin verildi.`);
+      return interaction.reply(`✅ Permission granted for the role **${role.name}** to use moderation commands.`);
     }
 
     if (sub === 'remove') {
@@ -59,12 +59,12 @@ module.exports = {
 
       if (!removed) {
         return interaction.reply({
-          content: `⚠️ **${role.name}** rolü zaten yetkili roller listesinde değil.`,
+          content: `⚠️ The role **${role.name}** is not in the authorized roles list.`,
           ephemeral: true,
         });
       }
 
-      return interaction.reply(`✅ **${role.name}** rolünün moderasyon yetkisi kaldırıldı.`);
+      return interaction.reply(`✅ Removed moderation permission from the role **${role.name}**.`);
     }
 
     if (sub === 'list') {
@@ -72,14 +72,14 @@ module.exports = {
 
       if (roleIds.length === 0) {
         return interaction.reply({
-          content: 'ℹ️ Henüz yetkili rol eklenmemiş. (`/perm add` ile ekleyebilirsin)',
+          content: 'ℹ️ No authorized roles added yet. (You can add one with `/perm add`)',
           ephemeral: true,
         });
       }
 
       const embed = new EmbedBuilder()
         .setColor('Blue')
-        .setTitle('🛡️ Yetkili Roller')
+        .setTitle('🛡️ Authorized Roles')
         .setDescription(roleIds.map((id) => `<@&${id}>`).join('\n'));
 
       return interaction.reply({ embeds: [embed], ephemeral: true });

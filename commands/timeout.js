@@ -4,20 +4,20 @@ const { checkPermission } = require('../utils/permissions');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('timeout')
-    .setDescription('Bir kullanıcıyı belirtilen süre kadar susturur')
+    .setDescription('Mutes a user for the specified duration')
     .addUserOption((option) =>
-      option.setName('user').setDescription('Susturulacak kullanıcı').setRequired(true)
+      option.setName('user').setDescription('The user to mute').setRequired(true)
     )
     .addIntegerOption((option) =>
       option
         .setName('minutes')
-        .setDescription('Susturma süresi (dakika, max 40320 = 28 gün)')
+        .setDescription('Timeout duration in minutes (max 40320 = 28 days)')
         .setRequired(true)
         .setMinValue(1)
         .setMaxValue(40320)
     )
     .addStringOption((option) =>
-      option.setName('reason').setDescription('Susturma sebebi').setRequired(false)
+      option.setName('reason').setDescription('The reason for the timeout').setRequired(false)
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
 
@@ -26,32 +26,32 @@ module.exports = {
 
     const targetUser = interaction.options.getUser('user');
     const minutes = interaction.options.getInteger('minutes');
-    const reason = interaction.options.getString('reason') || 'Sebep belirtilmedi';
+    const reason = interaction.options.getString('reason') || 'No reason provided';
 
     const member = interaction.guild.members.cache.get(targetUser.id);
 
     if (!member) {
-      return interaction.reply({ content: '❌ Kullanıcı sunucuda bulunamadı.', ephemeral: true });
+      return interaction.reply({ content: '❌ The user is not in the server.', ephemeral: true });
     }
 
     if (!member.moderatable) {
       return interaction.reply({
-        content: '❌ Bu kullanıcıyı susturamıyorum. (Rol hiyerarşisi veya izin sorunu)',
+        content: '❌ I cannot timeout this user. (Role hierarchy or permission issue)',
         ephemeral: true,
       });
     }
 
     try {
-      await member.timeout(minutes * 60 * 1000, `${reason} | Yetkili: ${interaction.user.tag}`);
+      await member.timeout(minutes * 60 * 1000, `${reason} | Moderator: ${interaction.user.tag}`);
 
       const embed = new EmbedBuilder()
         .setColor('Yellow')
-        .setTitle('🔇 Kullanıcı Susturuldu')
+        .setTitle('🔇 User Muted')
         .addFields(
-          { name: 'Kullanıcı', value: `${targetUser.tag} (${targetUser.id})` },
-          { name: 'Süre', value: `${minutes} dakika` },
-          { name: 'Yetkili', value: interaction.user.tag },
-          { name: 'Sebep', value: reason }
+          { name: 'User', value: `${targetUser.tag} (${targetUser.id})` },
+          { name: 'Duration', value: `${minutes} minutes` },
+          { name: 'Moderator', value: interaction.user.tag },
+          { name: 'Reason', value: reason }
         )
         .setTimestamp();
 
@@ -59,7 +59,7 @@ module.exports = {
     } catch (error) {
       console.error(error);
       return interaction.reply({
-        content: '❌ Kullanıcı susturulurken bir hata oluştu.',
+        content: '❌ An error occurred while muting the user.',
         ephemeral: true,
       });
     }

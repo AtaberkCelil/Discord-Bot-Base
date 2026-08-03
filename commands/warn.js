@@ -4,12 +4,12 @@ const { checkPermission } = require('../utils/permissions');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('warn')
-    .setDescription('Bir kullanıcıyı uyarır (DM olarak bildirim gönderir)')
+    .setDescription('Warns a user (sends a DM notification)')
     .addUserOption((option) =>
-      option.setName('user').setDescription('Uyarılacak kullanıcı').setRequired(true)
+      option.setName('user').setDescription('The user to warn').setRequired(true)
     )
     .addStringOption((option) =>
-      option.setName('reason').setDescription('Uyarı sebebi').setRequired(true)
+      option.setName('reason').setDescription('The reason for the warning').setRequired(true)
     ),
 
   async execute(interaction) {
@@ -20,21 +20,21 @@ module.exports = {
 
     const embed = new EmbedBuilder()
       .setColor('Yellow')
-      .setTitle('⚠️ Kullanıcı Uyarıldı')
+      .setTitle('⚠️ User Warned')
       .addFields(
-        { name: 'Kullanıcı', value: `${targetUser.tag} (${targetUser.id})` },
-        { name: 'Yetkili', value: interaction.user.tag },
-        { name: 'Sebep', value: reason }
+        { name: 'User', value: `${targetUser.tag} (${targetUser.id})` },
+        { name: 'Moderator', value: interaction.user.tag },
+        { name: 'Reason', value: reason }
       )
       .setTimestamp();
 
-    // Kullanıcıya DM göndermeyi dene (kapalıysa sorun değil, kanalda bildirim yeterli)
+    // Try sending a DM to the user (if closed, no problem, notification in the channel is enough)
     try {
       await targetUser.send(
-        `⚠️ **${interaction.guild.name}** sunucusunda bir uyarı aldın.\n**Sebep:** ${reason}`
+        `⚠️ You received a warning in the **${interaction.guild.name}** server.\n**Reason:** ${reason}`
       );
     } catch {
-      // DM'ler kapalı olabilir, sorun değil
+      // DMs might be closed, no problem
     }
 
     return interaction.reply({ embeds: [embed] });

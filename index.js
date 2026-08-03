@@ -19,14 +19,16 @@ const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('
 
 for (const file of commandFiles) {
   const filePath = path.join(commandsPath, file);
-  const command = require(filePath);
-  if ('data' in command && 'execute' in command) {
-    client.commands.set(command.data.name, command);
+  const fileModule = require(filePath);
+  if ('data' in fileModule && 'execute' in fileModule) {
+    client.commands.set(fileModule.data.name, fileModule);
   }
 }
 
+require('./commands/automod')(client);
+
 client.once(Events.ClientReady, () => {
-  console.log(`${client.user.tag} olarak giriş yapıldı!`);
+  console.log(`Logged in as ${client.user.tag}!`);
 });
 
 client.on(Events.InteractionCreate, async interaction => {
@@ -41,7 +43,7 @@ client.on(Events.InteractionCreate, async interaction => {
   } catch (error) {
     console.error(error);
     await interaction.reply({
-      content: 'Komut çalıştırılırken bir hata oluştu.',
+      content: 'An error occurred while executing the command.',
       ephemeral: true,
     });
   }

@@ -3,20 +3,20 @@ const axios = require('axios');
 
 module.exports = {
 	data: new SlashCommandBuilder()
-		.setName('weather') // Discord komut isimleri küçük harf olmalıdır
-		.setDescription('Belirtilen şehrin 7 günlük hava durumu tahminini gösterir.')
+		.setName('weather') // Discord command names should be lowercase
+		.setDescription('Shows the 7-day weather forecast for the specified city.')
 		.addStringOption(option =>
 			option
-				.setName('sehir')
-				.setDescription('Hava durumunu öğrenmek istediğiniz şehir adı')
+				.setName('city')
+				.setDescription('The name of the city to get the weather forecast for')
 				.setRequired(true)
 		),
 
 	async execute(interaction) {
-		// İşlem biraz sürebileceğinden interaction'ı beklemeye alıyoruz
+		// Defer the interaction because the operation may take a while
 		await interaction.deferReply();
 
-		// Yardımcı fonksiyon: editReply yapar ve 10 saniye sonra mesajı otomatik siler.
+		// Helper function: edits the reply and auto-deletes the message after 10 seconds.
 		const replyAndAutoDelete = async (payload, delayMs = 10_000) => {
 			await interaction.editReply(payload);
 			setTimeout(() => {
@@ -24,46 +24,46 @@ module.exports = {
 			}, delayMs);
 		};
 
-		const sehirAdi = interaction.options.getString('sehir');
+		const cityName = interaction.options.getString('city');
 
 		try {
-			// 1. Şehrin enlem ve boylamını bulmak için Geocoding API çağrısı
-			const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(sehirAdi)}&count=1&language=tr&format=json`;
+			// 1. Geocoding API call to find the city's coordinates
+			const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityName)}&count=1&language=en&format=json`;
 			const geoResponse = await axios.get(geoUrl);
 
 			if (!geoResponse.data.results || geoResponse.data.results.length === 0) {
 				return await replyAndAutoDelete({
-					content: `❌ **"${sehirAdi}"** adında bir şehir bulunamadı. Lütfen ismi kontrol edip tekrar deneyin.`,
+					content: `❌ No city named **"${cityName}"** was found. Please check the name and try again.`,
 				});
 			}
 
 			const location = geoResponse.data.results[0];
 			const { latitude, longitude, name, country } = location;
 
-			// 2. Koordinatlara göre 7 günlük hava durumu verisini çekme
+			// 2. Fetch the 7-day weather data based on coordinates
 			const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=auto`;
 			const weatherResponse = await axios.get(weatherUrl);
 
 			const daily = weatherResponse.data.daily;
 
-			// Weathercode (Hava Durumu Kodu) karşılıkları
+			// Weather status mappings for weather codes
 			const getWeatherStatus = (code) => {
-				if (code === 0) return '☀️ Açık';
-				if (code >= 1 && code <= 3) return '🌤️ Parçalı Bulutlu';
-				if (code >= 45 && code <= 48) return '🌫️ Sisli';
-				if (code >= 51 && code <= 67) return '🌧️ Yağmurlu';
-				if (code >= 71 && code <= 77) return '❄️ Karlı';
-				if (code >= 80 && code <= 82) return '🌦️ Sağanak Yağışlı';
-				if (code >= 95) return '⛈️ Gökgürültülü Fırtına';
-				return '☁️ Bulutlu';
+				if (code === 0) return '☀️ Clear';
+				if (code >= 1 && code <= 3) return '🌤️ Partly Cloudy';
+				if (code >= 45 && code <= 48) return '🌫️ Foggy';
+				if (code >= 51 && code <= 67) return '🌧️ Rainy';
+				if (code >= 71 && code <= 77) return '❄️ Snowy';
+				if (code >= 80 && code <= 82) return '🌦️ Showery';
+				if (code >= 95) return '⛈️ Thunderstorm';
+				return '☁️ Cloudy';
 			};
 
-			// 7 Günlük tahmini formatlama
+			// Format the 7-day forecast
 			let forecastText = '';
 			for (let i = 0; i < daily.time.length; i++) {
 				const dateStr = daily.time[i]; // YYYY-MM-DD
 				const dateObj = new Date(dateStr);
-				const formattedDate = dateObj.toLocaleDateString('tr-TR', {
+				const formattedDate = dateObj.toLocaleDateString('en-US', {
 					weekday: 'short',
 					day: 'numeric',
 					month: 'numeric',
@@ -76,20 +76,20 @@ module.exports = {
 				forecastText += `**${formattedDate}**: ${status} | 📈 **${maxTemp}°C** / 📉 **${minTemp}°C**\n`;
 			}
 
-			// Discord Embed mesajı oluşturma
+			// Create a Discord embed message
 			const embed = new EmbedBuilder()
 				.setColor(0x0099ff)
-				.setTitle(`🌤️ ${name}, ${country} - 7 Günlük Hava Durumu Tahmini`)
+				.setTitle(`🌤️ ${name}, ${country} - 7-Day Weather Forecast`)
 				.setDescription(forecastText)
 				.setTimestamp()
-				.setFooter({ text: 'Hava durumu verileri Open-Meteo sağlandı.' });
+				.setFooter({ text: 'Weather data provided by Open-Meteo.' });
 
 			await replyAndAutoDelete({ embeds: [embed] });
 		}
 		catch (error) {
-			console.error('Hava durumu komutu hatası:', error);
+			console.error('Weather command error:', error);
 			await replyAndAutoDelete({
-				content: '❌ Hava durumu verileri alınırken bir hata oluştu. Lütfen daha sonra tekrar deneyin.',
+				content: '❌ An error occurred while fetching weather data. Please try again later.',
 			});
 		}
 	},

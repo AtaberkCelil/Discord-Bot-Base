@@ -4,12 +4,12 @@ const { checkPermission } = require('../utils/permissions');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('kick')
-    .setDescription('Bir kullanıcıyı sunucudan atar')
+    .setDescription('Kicks a user from the server')
     .addUserOption((option) =>
-      option.setName('user').setDescription('Atılacak kullanıcı').setRequired(true)
+      option.setName('user').setDescription('The user to kick').setRequired(true)
     )
     .addStringOption((option) =>
-      option.setName('reason').setDescription('Atılma sebebi').setRequired(false)
+      option.setName('reason').setDescription('The reason for the kick').setRequired(false)
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.KickMembers),
 
@@ -17,17 +17,17 @@ module.exports = {
     if (!(await checkPermission(interaction))) return;
 
     const targetUser = interaction.options.getUser('user');
-    const reason = interaction.options.getString('reason') || 'Sebep belirtilmedi';
+    const reason = interaction.options.getString('reason') || 'No reason provided';
 
     const member = interaction.guild.members.cache.get(targetUser.id);
 
     if (!member) {
-      return interaction.reply({ content: '❌ Kullanıcı sunucuda bulunamadı.', ephemeral: true });
+      return interaction.reply({ content: '❌ The user is not in the server.', ephemeral: true });
     }
 
     if (!member.kickable) {
       return interaction.reply({
-        content: '❌ Bu kullanıcıyı atamıyorum. (Rol hiyerarşisi veya izin sorunu)',
+        content: '❌ I cannot kick this user. (Role hierarchy or permission issue)',
         ephemeral: true,
       });
     }
@@ -37,11 +37,11 @@ module.exports = {
 
       const embed = new EmbedBuilder()
         .setColor('Orange')
-        .setTitle('👢 Kullanıcı Atıldı')
+        .setTitle('👢 User Kicked')
         .addFields(
-          { name: 'Kullanıcı', value: `${targetUser.tag} (${targetUser.id})` },
-          { name: 'Yetkili', value: interaction.user.tag },
-          { name: 'Sebep', value: reason }
+          { name: 'User', value: `${targetUser.tag} (${targetUser.id})` },
+          { name: 'Moderator', value: interaction.user.tag },
+          { name: 'Reason', value: reason }
         )
         .setTimestamp();
 
@@ -49,7 +49,7 @@ module.exports = {
     } catch (error) {
       console.error(error);
       return interaction.reply({
-        content: '❌ Kullanıcı atılırken bir hata oluştu.',
+        content: '❌ An error occurred while kicking the user.',
         ephemeral: true,
       });
     }

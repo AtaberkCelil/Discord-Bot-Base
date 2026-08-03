@@ -3,11 +3,11 @@ const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 module.exports = {
 	data: new SlashCommandBuilder()
 		.setName('time')
-		.setDescription('Bir şehrin veya RTC (UTC) saatini gösterir')
+		.setDescription('Shows the current time for a city or RTC (UTC)')
 		.addStringOption(option =>
 			option
 				.setName('city')
-				.setDescription('Şehir adı veya RTC (UTC) için "RTC" yazın')
+				.setDescription('Enter the city name or write "RTC" for UTC')
 				.setRequired(true)
 		),
 
@@ -16,8 +16,8 @@ module.exports = {
 
 		const cityInput = interaction.options.getString('city');
 
-		// Yardımcı fonksiyon: editReply yapar ve 10 saniye sonra mesajı otomatik siler.
-		// payload = editReply'a normalde verdiğin obje ({ embeds: [...] } veya { content: '...' })
+		// Helper function: edits the reply and auto-deletes the message after 10 seconds.
+		// payload = the object normally given to editReply ({ embeds: [...] } or { content: '...' })
 		const replyAndAutoDelete = async (payload, delayMs = 10_000) => {
 			await interaction.editReply(payload);
 			setTimeout(() => {
@@ -26,11 +26,11 @@ module.exports = {
 		};
 
 		try {
-			// Özel durum: RTC -> UTC saati doğrudan gösterilir, geocoding'e gerek yok
+			// Special case: RTC -> show UTC time directly, no geocoding needed
 			if (cityInput.trim().toUpperCase() === 'RTC') {
 				const now = new Date();
 
-				const timeFormatter = new Intl.DateTimeFormat('tr-TR', {
+				const timeFormatter = new Intl.DateTimeFormat('en-US', {
 					timeZone: 'UTC',
 					hour: '2-digit',
 					minute: '2-digit',
@@ -38,7 +38,7 @@ module.exports = {
 					hour12: false,
 				});
 
-				const dateFormatter = new Intl.DateTimeFormat('tr-TR', {
+				const dateFormatter = new Intl.DateTimeFormat('en-US', {
 					timeZone: 'UTC',
 					weekday: 'long',
 					year: 'numeric',
@@ -48,19 +48,19 @@ module.exports = {
 
 				const rtcEmbed = new EmbedBuilder()
 					.setColor(0x5865f2)
-					.setTitle('🕒 RTC - Gerçek Zamanlı Saat')
+					.setTitle('🕒 RTC - Real Time Clock')
 					.addFields(
-						{ name: '⏰ Anlık Saat', value: `\`\`\`${timeFormatter.format(now)}\`\`\``, inline: true },
-						{ name: '📅 Tarih', value: dateFormatter.format(now), inline: true },
-						{ name: '🌍 Zaman Dilimi', value: '`RTC`', inline: false }
+						{ name: '⏰ Current Time', value: `\`\`\`${timeFormatter.format(now)}\`\`\``, inline: true },
+						{ name: '📅 Date', value: dateFormatter.format(now), inline: true },
+						{ name: '🌍 Timezone', value: '`RTC`', inline: false }
 					)
 					.setTimestamp()
-					.setFooter({ text: `${interaction.user.username} tarafından istendi.`, iconURL: interaction.user.displayAvatarURL() });
+					.setFooter({ text: `Requested by ${interaction.user.username}.`, iconURL: interaction.user.displayAvatarURL() });
 
 				return await replyAndAutoDelete({ embeds: [rtcEmbed] });
 			}
 
-			// Normal şehir araması
+			// Normal city search
 			const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityInput)}&count=1&language=en&format=json`;
 			const response = await fetch(geoUrl);
 			const data = await response.json();
@@ -76,13 +76,13 @@ module.exports = {
 
 			if (!timezone) {
 				return await replyAndAutoDelete({
-					content: `❌ **"${name}"** için zaman dilimi verisine ulaşılamadı.`,
+					content: `❌ Could not reach the timezone data for **"${name}"**.`,
 				});
 			}
 
 			const now = new Date();
 
-			const timeFormatter = new Intl.DateTimeFormat('tr-TR', {
+			const timeFormatter = new Intl.DateTimeFormat('en-US', {
 				timeZone: timezone,
 				hour: '2-digit',
 				minute: '2-digit',
@@ -90,7 +90,7 @@ module.exports = {
 				hour12: false,
 			});
 
-			const dateFormatter = new Intl.DateTimeFormat('tr-TR', {
+			const dateFormatter = new Intl.DateTimeFormat('en-US', {
 				timeZone: timezone,
 				weekday: 'long',
 				year: 'numeric',
@@ -103,20 +103,20 @@ module.exports = {
 
 			const embed = new EmbedBuilder()
 				.setColor(0x5865f2)
-				.setTitle(`🕒 ${name}, ${country || ''} - Yerel Saat`)
+				.setTitle(`🕒 ${name}, ${country || ''} - Local Time`)
 				.addFields(
-					{ name: '⏰ Anlık Saat', value: `\`\`\`${formattedTime}\`\`\``, inline: true },
-					{ name: '📅 Tarih', value: formattedDate, inline: true },
-					{ name: '🌍 Zaman Dilimi', value: `\`${timezone}\``, inline: false }
+					{ name: '⏰ Current Time', value: `\`\`\`${formattedTime}\`\`\``, inline: true },
+					{ name: '📅 Date', value: formattedDate, inline: true },
+					{ name: '🌍 Timezone', value: `\`${timezone}\``, inline: false }
 				)
 				.setTimestamp()
-				.setFooter({ text: `${interaction.user.username} tarafından istendi.`, iconURL: interaction.user.displayAvatarURL() });
+				.setFooter({ text: `Requested by ${interaction.user.username}.`, iconURL: interaction.user.displayAvatarURL() });
 
 			await replyAndAutoDelete({ embeds: [embed] });
 		} catch (error) {
-			console.error('Saat komutu hatası:', error);
+			console.error('Time command error:', error);
 			await replyAndAutoDelete({
-				content: '❌ Saat bilgisi alınırken bir hata oluştu. Lütfen daha sonra tekrar deneyin.',
+				content: '❌ An error occurred while fetching the time. Please try again later.',
 			});
 		}
 	},
